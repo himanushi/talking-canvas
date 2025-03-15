@@ -50,9 +50,33 @@ class MovingObject {
     if (this.y < 0 || this.y > p.height) this.speedY *= -1;
   }
 
+  shape: string = "circle";
+
   draw(p: p5) {
     p.fill(this.color);
-    p.ellipse(this.x, this.y, this.size);
+    p.push();
+    p.translate(this.x, this.y);
+
+    switch (this.shape) {
+      case "square":
+        p.rectMode(p.CENTER);
+        p.rect(0, 0, this.size, this.size);
+        break;
+      case "triangle":
+        const h = (this.size * Math.sqrt(3)) / 2;
+        p.triangle(
+          0,
+          -h / 2, // 上頂点
+          -this.size / 2,
+          h / 2, // 左下
+          this.size / 2,
+          h / 2, // 右下
+        );
+        break;
+      default: // circle
+        p.ellipse(0, 0, this.size);
+    }
+    p.pop();
   }
 }
 
@@ -71,8 +95,14 @@ class App {
   }
 
   private setupOpenAI() {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error("OpenAI APIキーが設定されていません。");
+      return;
+    }
+
     this.openai = new OpenAI({
-      apiKey: "YOUR_API_KEY_HERE", // OpenAI APIキーを設定してください
+      apiKey: apiKey,
       dangerouslyAllowBrowser: true,
     });
   }
@@ -92,18 +122,23 @@ class App {
         const response = await this.openai.chat.completions.create({
           messages: [
             {
+              role: "system",
+              content:
+                '与えられた発話から図形の情報を抽出し、以下のJSON形式で返してください：{"shape": "circle"|"square"|"triangle", "color": "赤"|"青"|"緑"|"黄"|"紫"|"オレンジ", "size": 小(30)|中(50)|大(70)}',
+            },
+            {
               role: "user",
-              content: `次の発話から描画すべき図形の情報を抽出してJSON形式で返してください。発話: "${transcript}"`,
+              content: `次の発話から図形の情報を抽出してください: "${transcript}"`,
             },
           ],
-          model: "gpt-3.5-turbo",
+          model: "o3-mini",
           response_format: { type: "json_object" },
         });
 
         if (response.choices[0].message.content) {
           const result = JSON.parse(response.choices[0].message.content);
-          // 新しいオブジェクトを追加
-          this.addObject();
+          // 図形の情報に基づいてオブジェクトを追加
+          this.addObject(result);
         }
       } catch (error) {
         console.error("Error:", error);
@@ -117,10 +152,39 @@ class App {
     };
   }
 
-  private addObject() {
+  private addObject(info: { shape: string; color: string; size: string }) {
     const x = Math.random() * this.p5Instance.width;
     const y = Math.random() * this.p5Instance.height;
-    this.objects.push(new MovingObject(x, y));
+    const obj = new MovingObject(x, y);
+    obj.shape = info.shape;
+
+    // サイズの設定
+    switch (info.size) {
+      case "小":
+        obj.size = 30;
+        break;
+      case "中":
+        obj.size = 50;
+        break;
+      case "大":
+        obj.size = 70;
+        break;
+    }
+
+    // 色の設定
+    const colorMap: { [key: string]: string } = {
+      赤: "rgb(255, 0, 0)",
+      青: "rgb(0, 0, 255)",
+      緑: "rgb(0, 255, 0)",
+      黄: "rgb(255, 255, 0)",
+      紫: "rgb(128, 0, 128)",
+      オレンジ: "rgb(255, 165, 0)",
+    };
+    obj.color =
+      colorMap[info.color] ||
+      `rgb(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255})`;
+
+    this.objects.push(obj);
   }
 
   private sketch(p: p5) {

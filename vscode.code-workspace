@@ -1,0 +1,27 @@
+{
+  "folders": [
+    {
+      "path": "./",
+    },
+  ],
+  "settings": {
+    "emeraldwalk.runonsave": {
+      "commands": [
+        {
+          "match": "\\.js$|\\.cjs$|\\.jsx$|\\.tsx$|\\.ts$|\\.json$|\\.css$|\\.code-workspace$",
+          "cmd": "npx eslint --fix ${file}",
+        },
+        {
+          "match": "\\.js$|\\.cjs$|\\.jsx$|\\.tsx$|\\.ts$|\\.json$|\\.css$|\\.code-workspace$|\\.scss$|\\.code-workspace$||\\.md$",
+          "cmd": "npx prettier --write ${file}",
+        },
+      ],
+    },
+    "editor.formatOnSave": false,
+    "editor.renderWhitespace": "all",
+    "typescript.preferences.importModuleSpecifier": "non-relative",
+  },
+  "extensions": {
+    "recommendations": ["emeraldwalk.runonsave", "dbaeumer.vscode-eslint"],
+  },
+}

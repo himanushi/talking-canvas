@@ -1,21 +1,23 @@
 import p5 from "p5";
+import { DrawFunction, IDrawableObject, ObjectConfig } from "./IDrawableObject";
 
-export class MovingObject {
+export class MovingObject implements IDrawableObject {
   x: number;
   y: number;
   speedX: number;
   speedY: number;
   size: number;
   color: string;
-  shape: string = "circle";
+  private drawFunction: DrawFunction;
 
-  constructor(x: number, y: number) {
-    this.x = x;
-    this.y = y;
-    this.speedX = Math.random() * 4 - 2;
-    this.speedY = Math.random() * 4 - 2;
-    this.size = 50;
-    this.color = `rgb(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255})`;
+  constructor(config: ObjectConfig, drawFunction: DrawFunction) {
+    this.x = config.x;
+    this.y = config.y;
+    this.speedX = config.speedX ?? Math.random() * 4 - 2;
+    this.speedY = config.speedY ?? Math.random() * 4 - 2;
+    this.size = config.size;
+    this.color = config.color;
+    this.drawFunction = drawFunction;
   }
 
   update(p: p5) {
@@ -31,26 +33,14 @@ export class MovingObject {
     p.fill(this.color);
     p.push();
     p.translate(this.x, this.y);
-
-    switch (this.shape) {
-      case "square":
-        p.rectMode(p.CENTER);
-        p.rect(0, 0, this.size, this.size);
-        break;
-      case "triangle":
-        const h = (this.size * Math.sqrt(3)) / 2;
-        p.triangle(
-          0,
-          -h / 2, // 上頂点
-          -this.size / 2,
-          h / 2, // 左下
-          this.size / 2,
-          h / 2, // 右下
-        );
-        break;
-      default: // circle
-        p.ellipse(0, 0, this.size);
-    }
+    this.drawFunction(p, {
+      x: this.x,
+      y: this.y,
+      size: this.size,
+      color: this.color,
+      speedX: this.speedX,
+      speedY: this.speedY,
+    });
     p.pop();
   }
 }

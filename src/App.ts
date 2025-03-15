@@ -1,17 +1,20 @@
 import p5 from "p5";
 import OpenAI from "openai";
-import { MovingObject } from "./objects/MovingObject";
+import { ObjectFactory } from "./objects/ObjectFactory";
+import { ObjectConfig } from "./objects/IDrawableObject";
 import type { SpeechRecognitionEvent } from "./types/speech";
 
 export class App {
   private p5Instance: p5;
-  private objects: MovingObject[] = [];
+  private objects: any[] = [];
+  private objectFactory: ObjectFactory;
   private recognition: any;
   private openai!: OpenAI;
   private isListening: boolean = false;
 
   constructor() {
     this.p5Instance = new p5(this.sketch.bind(this));
+    this.objectFactory = ObjectFactory.getInstance();
     this.setupSpeechRecognition();
     this.setupOpenAI();
   }
@@ -46,7 +49,7 @@ export class App {
             {
               role: "system",
               content:
-                '与えられた発話から図形の情報を抽出し、以下のJSON形式で返してください：{"shape": "circle"|"square"|"triangle", "color": "赤"|"青"|"緑"|"黄"|"紫"|"オレンジ", "size": 小(30)|中(50)|大(70)}',
+                '与えられた発話から図形の情報を抽出し、以下のJSON形式で返してください：{"shape": "circle"|"square"|"triangle"|"dinosaur", "color": "赤"|"青"|"緑"|"黄"|"紫"|"オレンジ", "size": 小(30)|中(50)|大(70)}。恐竜についての発話（例：「青い恐竜」）の場合は、shapeを"dinosaur"としてください。',
             },
             {
               role: "user",
@@ -77,20 +80,21 @@ export class App {
   private addObject(info: { shape: string; color: string; size: string }) {
     const x = Math.random() * this.p5Instance.width;
     const y = Math.random() * this.p5Instance.height;
-    const obj = new MovingObject(x, y);
-    obj.shape = info.shape;
 
     // サイズの設定
+    let size: number;
     switch (info.size) {
       case "小":
-        obj.size = 30;
+        size = 30;
         break;
       case "中":
-        obj.size = 50;
+        size = 50;
         break;
       case "大":
-        obj.size = 70;
+        size = 70;
         break;
+      default:
+        size = 50;
     }
 
     // 色の設定
@@ -102,11 +106,24 @@ export class App {
       紫: "rgb(128, 0, 128)",
       オレンジ: "rgb(255, 165, 0)",
     };
-    obj.color =
+
+    const color =
       colorMap[info.color] ||
       `rgb(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255})`;
 
-    this.objects.push(obj);
+    const config: ObjectConfig = {
+      x,
+      y,
+      size,
+      color,
+    };
+
+    try {
+      const obj = this.objectFactory.createObject(info.shape, config);
+      this.objects.push(obj);
+    } catch (error) {
+      console.error(`オブジェクトの作成に失敗しました: ${error}`);
+    }
   }
 
   private sketch(p: p5) {
